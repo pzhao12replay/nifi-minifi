@@ -22,7 +22,7 @@ import org.apache.nifi.controller.repository.io.LimitedInputStream;
 import org.apache.nifi.minifi.commons.schema.ConfigSchema;
 import org.apache.nifi.minifi.commons.schema.ConnectionSchema;
 import org.apache.nifi.minifi.commons.schema.ProcessorSchema;
-import org.apache.nifi.minifi.commons.schema.RemotePortSchema;
+import org.apache.nifi.minifi.commons.schema.RemoteInputPortSchema;
 import org.apache.nifi.minifi.commons.schema.RemoteProcessGroupSchema;
 import org.apache.nifi.minifi.commons.schema.common.ConvertableSchema;
 import org.apache.nifi.minifi.commons.schema.serialization.SchemaLoader;
@@ -168,10 +168,6 @@ public class ConfigMainTest {
     }
 
     @Test
-    public void testTransformRoundTrip15RPGHandling() throws IOException, JAXBException, SchemaLoaderException {
-        transformRoundTrip("1.5_RPG_Handling");
-    }
-    @Test
     public void testTransformRoundTripDecompression() throws IOException, JAXBException, SchemaLoaderException {
         transformRoundTrip("DecompressionCircularFlow");
     }
@@ -209,11 +205,6 @@ public class ConfigMainTest {
     @Test
     public void testTransformRoundTripSimpleTailFileToRPG() throws IOException, JAXBException, SchemaLoaderException {
         transformRoundTrip("SimpleTailFileToRPG");
-    }
-
-    @Test
-    public void testTransformRoundTripSimpleRPGToLogAttributes() throws IOException, JAXBException, SchemaLoaderException {
-        transformRoundTrip("SimpleRPGToLogAttributes");
     }
 
     @Test
@@ -310,19 +301,18 @@ public class ConfigMainTest {
 
             ConfigSchema configSchemaFromCurrent = new ConfigSchema(yamlMap);
             ConfigSchema.getAllProcessGroups(configSchemaFromCurrent.getProcessGroupSchema()).stream().flatMap(p -> p.getRemoteProcessGroups().stream()).forEach(r -> {
-                clearV3orLaterProperties(r);
+                clearProxyInfo(r);
             });
 
             assertNoMapDifferences(configSchemaUpgradedFromV2.toMap(), configSchemaFromCurrent.toMap());
         }
     }
 
-    private void clearV3orLaterProperties(RemoteProcessGroupSchema remoteProcessGroupSchema) {
+    private void clearProxyInfo(RemoteProcessGroupSchema remoteProcessGroupSchema) {
         remoteProcessGroupSchema.setProxyHost(RemoteProcessGroupSchema.DEFAULT_PROXY_HOST);
         remoteProcessGroupSchema.setProxyPort(RemoteProcessGroupSchema.DEFAULT_PROXY_PORT);
         remoteProcessGroupSchema.setProxyUser(RemoteProcessGroupSchema.DEFAULT_PROXY_USER);
         remoteProcessGroupSchema.setProxyPassword(RemoteProcessGroupSchema.DEFAULT_PROXY_PASSWORD);
-        remoteProcessGroupSchema.setLocalNetworkInterface(RemoteProcessGroupSchema.DEFAULT_NETWORK_INTERFACE);
     }
 
     private void testV1YmlIfPresent(String name, Map<String, Object> yamlMap) throws IOException, SchemaLoaderException {
@@ -358,7 +348,7 @@ public class ConfigMainTest {
                 v1RPG.setId(currentRPG.getId());
             }
 
-            configSchemaUpgradedFromV1.getProcessGroupSchema().getRemoteProcessGroups().stream().flatMap(g -> g.getInputPorts().stream()).map(RemotePortSchema::getId).sequential()
+            configSchemaUpgradedFromV1.getProcessGroupSchema().getRemoteProcessGroups().stream().flatMap(g -> g.getInputPorts().stream()).map(RemoteInputPortSchema::getId).sequential()
                     .forEach(id -> v1IdToCurrentIdMap.put(id, id));
 
             List<ConnectionSchema> currentConnections = configSchemaFromCurrent.getProcessGroupSchema().getConnections();
@@ -376,7 +366,7 @@ public class ConfigMainTest {
             }
 
             ConfigSchema.getAllProcessGroups(configSchemaFromCurrent.getProcessGroupSchema()).stream().flatMap(p -> p.getRemoteProcessGroups().stream()).forEach(r -> {
-                clearV3orLaterProperties(r);
+                clearProxyInfo(r);
                 r.setTransportProtocol(RemoteProcessGroupSchema.TransportProtocolOptions.RAW.name());
             });
             Map<String, Object> v1YamlMap = configSchemaUpgradedFromV1.toMap();

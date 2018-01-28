@@ -29,14 +29,13 @@ import org.apache.nifi.authorization.exception.AuthorizerDestructionException;
 import org.apache.nifi.controller.FlowController;
 import org.apache.nifi.controller.StandardFlowService;
 import org.apache.nifi.controller.repository.FlowFileEventRepository;
-import org.apache.nifi.controller.repository.metrics.RingBufferEventRepository;
+import org.apache.nifi.controller.repository.RingBufferEventRepository;
 import org.apache.nifi.encrypt.StringEncryptor;
 import org.apache.nifi.events.VolatileBulletinRepository;
 import org.apache.nifi.minifi.commons.status.FlowStatusReport;
 import org.apache.nifi.minifi.status.StatusConfigReporter;
 import org.apache.nifi.minifi.status.StatusRequestException;
 import org.apache.nifi.registry.VariableRegistry;
-import org.apache.nifi.registry.flow.StandardFlowRegistryClient;
 import org.apache.nifi.reporting.BulletinRepository;
 import org.apache.nifi.services.FlowService;
 import org.apache.nifi.util.FileBasedVariableRegistry;
@@ -52,8 +51,6 @@ public class MiNiFiServer {
     private final NiFiProperties props;
     private FlowService flowService;
     private FlowController flowController;
-
-    private static final String DEFAULT_SENSITIVE_PROPS_KEY = "nififtw!";
 
     /**
      *
@@ -90,12 +87,7 @@ public class MiNiFiServer {
                     // do nothing
                 }
             };
-
-            final String sensitivePropAlgorithmVal = props.getProperty(StringEncryptor.NF_SENSITIVE_PROPS_ALGORITHM);
-            final String sensitivePropProviderVal = props.getProperty(StringEncryptor.NF_SENSITIVE_PROPS_PROVIDER);
-            final String sensitivePropValueNifiPropVar = props.getProperty(StringEncryptor.NF_SENSITIVE_PROPS_KEY, DEFAULT_SENSITIVE_PROPS_KEY);
-
-            StringEncryptor encryptor = StringEncryptor.createEncryptor(sensitivePropAlgorithmVal, sensitivePropProviderVal, sensitivePropValueNifiPropVar);
+            StringEncryptor encryptor = StringEncryptor.createEncryptor(props);
             VariableRegistry variableRegistry = new FileBasedVariableRegistry(props.getVariableRegistryPropertiesPaths());
             BulletinRepository bulletinRepository = new VolatileBulletinRepository();
 
@@ -106,8 +98,7 @@ public class MiNiFiServer {
                     auditService,
                     encryptor,
                     bulletinRepository,
-                    variableRegistry,
-                    new StandardFlowRegistryClient()
+                    variableRegistry
                     );
 
             flowService = StandardFlowService.createStandaloneInstance(
